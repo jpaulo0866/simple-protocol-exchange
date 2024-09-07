@@ -1,6 +1,21 @@
 ## Simple Protocolo Exchange
 
+Serviço serve para receber dados em um protocolo, mapear e enviar para outro local
 
+- TCP -> TCP
+- UDP -> UDP
+- TCP -> UDP
+- UDP -> TCP
+- UDP -> HTTP
+- TCP -> HTTP
+- HTTP -> HTTP
+- etc...
+
+Além disso, possui uma funcionalidade de transformação de JSON com estruturas simples:
+
+- Adicionar valores estáticos
+- Remover campos
+- Remapear campos
 
 ## SETUP
 
