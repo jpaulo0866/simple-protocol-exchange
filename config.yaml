@@ -1,0 +1,52 @@
+routes:
+  - protocol: tcp
+    port: 12203
+    name: "TCP para Datadog"
+    entry:
+      basePath: ""
+      content_type: "json"
+      compressed: false
+    transform:
+      remap:
+        - source: "_app_name"
+          target: "service"
+          preserve_source: true
+        - source: "_source"
+          target: "hostname"
+          preserve_source: true
+        - source: "_message"
+          target: "message"
+          preserve_source: true
+        - source: "_createdAt"
+          target: "timestamp"
+          preserve_source: true
+        - source: "_ts"
+          target: "timestamp"
+          preserve_source: true
+        - source: "_timestamp"
+          target: "timestamp"
+          preserve_source: true
+        - source: "_level_name"
+          target: "log_level"
+          preserve_source: true
+        - source: "_environment"
+          target: "environment"
+          preserve_source: true
+        - source: "_environment"
+          target: "env"
+          preserve_source: true
+      static_fields:
+        ddsource: "spe"
+        ddtags: "tool:simple-protocol-exchange"
+      remove_fields:
+        - "_message"
+        - "_source"
+        - "version"
+    output:
+      host: "http-intake.logs.datadoghq.com"
+      port: 443
+      protocol: "https"
+      path: "/api/v2/logs"
+      timeout: 60
+      headers:
+        DD-API-KEY: "somekey"
