@@ -41,7 +41,20 @@ func main() {
 }
 
 func configureHttp(route *Route, waitGroup *sync.WaitGroup) {
-	// panic("unimplemented")
+	defer waitGroup.Done()
+
+	// Configura o servidor HTTP
+	http.HandleFunc(route.Entry.BasePath, func(w http.ResponseWriter, r *http.Request) {
+		// Processa a requisição HTTP
+		handleHttpConnection(w, r, route)
+	})
+
+	// Inicia o servidor HTTP
+	address := ":" + strconv.Itoa(route.Port)
+	log.Printf("Servidor HTTP rodando na porta %d", route.Port)
+	if err := http.ListenAndServe(address, nil); err != nil {
+		log.Fatalf("Erro ao iniciar servidor HTTP na porta %d: %v", route.Port, err)
+	}
 }
 
 func configureTcp(route *Route, waitGroup *sync.WaitGroup) {
@@ -178,6 +191,45 @@ func handleTcpConnection(conn net.Conn, waitGroup *sync.WaitGroup, clientAddr st
 
 }
 
+func handleHttpConnection(w http.ResponseWriter, r *http.Request, route *Route) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Lê o corpo da requisição
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Erro ao ler o corpo da requisição", http.StatusInternalServerError)
+		log.Printf("Erro ao ler o corpo da requisição: %v", err)
+		return
+	}
+	defer r.Body.Close()
+
+	// Se os dados estiverem comprimidos, descomprime
+	data := strings.TrimSpace(string(body))
+	if route.Entry.Compressed {
+		tempBuff, err := decompressGzip([]byte(data))
+		if err != nil {
+			log.Printf("Erro ao descomprimir dados %v", err)
+		}
+		data = string(tempBuff)
+	}
+
+	// Verifica se o JSON está completo e processa
+	if isCompleteMessage([]byte(data), route.Entry.ContentType) {
+		processRequest([]byte(data), route)
+	} else {
+		log.Printf("Mensagem HTTP incompleta, %q", string(data))
+		http.Error(w, "Mensagem incompleta", http.StatusBadRequest)
+		return
+	}
+
+	// Retorna uma resposta de sucesso
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Dados processados com sucesso"))
+}
+
 func processRequest(data []byte, route *Route) {
 	modifiedData, err := applyTransformations(data, route.Transform, route.Entry.ContentType)
 	if err != nil {
@@ -191,11 +243,45 @@ func processOutput(modifiedData []byte, route *Route) {
 	switch route.Output.Protocol {
 	case "tcp":
 		handleTcpOutput(modifiedData, route)
+	case "file":
+		handleFileOutput(modifiedData, route)
 	case "udp":
 		handleUdpOutput(modifiedData, route)
 	case "http", "https":
 		handleHttpOutput(modifiedData, route)
 	}
+}
+
+func handleFileOutput(modifiedData []byte, route *Route) {
+	var currentTime = time.Now().Format("2006-01-02 15:04:05.000")
+	var filename = strings.Replace(
+		route.Output.FilePattern,
+		"${DATE}",
+		currentTime,
+		1,
+	)
+
+	var fileContent = `
+	%s - Incoming Data at %s - PORT: %d using protocol %s
+	Data: %q
+	`
+
+	// Abre o arquivo para fazer o append
+	file, err := openFileWithAppend(filename)
+	if err != nil {
+		log.Printf("Erro ao abrir arquivo: %v", err)
+		return
+	}
+	defer file.Close()
+
+	var data = []byte(fmt.Sprintf(fileContent, currentTime, route.Name, route.Port, route.Protocol, string(modifiedData)))
+
+	if _, err := file.Write(data); err != nil {
+		log.Printf("Erro ao escrever dados no arquivo: %v", err)
+	} else {
+		log.Printf("Dados gravados no arquivo: %s", filename)
+	}
+
 }
 
 func handleHttpOutput(modifiedData []byte, route *Route) {

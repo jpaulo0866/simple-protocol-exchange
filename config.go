@@ -39,12 +39,13 @@ type FieldMap struct {
 }
 
 type Output struct {
-	Host     string            `yaml:"host"`
-	Port     int               `yaml:"port"`
-	Protocol string            `yaml:"protocol"`
-	Path     string            `yaml:"path"`
-	Timeout  int               `yaml:"timeout"`
-	Headers  map[string]string `yaml:"headers"`
+	Host        string            `yaml:"host"`
+	Port        int               `yaml:"port"`
+	Protocol    string            `yaml:"protocol"`
+	Path        string            `yaml:"path"`
+	Timeout     int               `yaml:"timeout"`
+	Headers     map[string]string `yaml:"headers"`
+	FilePattern string            `yaml:"file_pattern"`
 }
 
 func parseConfig(filePath string) (*RouteConfig, error) {
