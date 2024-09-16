@@ -9,6 +9,9 @@ Serviço serve para receber dados em um protocolo, mapear e enviar para outro lo
 - UDP -> HTTP
 - TCP -> HTTP
 - HTTP -> HTTP
+- HTTP -> FILE
+- TCP -> FILE
+- UDP -> FILE
 - etc...
 
 Além disso, possui uma funcionalidade de transformação de JSON com estruturas simples:
